@@ -4,7 +4,7 @@ use crate::message::Message;
 
 pub struct Env {
     users : HashMap<String, User>,
-    log : Vec<String>,
+    log : Vec<Message>,
 }
 
 impl Env {
@@ -38,7 +38,9 @@ impl Env {
             panic!("receiver not found");
         }
         else{
-            self.log.push(String::from(message.get_message()));
+            self.log.push(message.clone());
+            let receiver : &mut User = self.users.get_mut(message.get_receiver()).expect("receiver not found");
+            receiver.message_buffer.push(message);
         }
     }
 }
