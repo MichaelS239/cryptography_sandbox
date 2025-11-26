@@ -1,12 +1,20 @@
 use cryptography_sandbox::user::User;
 use cryptography_sandbox::env::Env;
+use cryptography_sandbox::message::Message;
 
 fn main() {
     let mut env : Env = Env::new();
-    let user1 : User = env.create_user("Alice");
-    let user2 : User = env.create_user("Bob");
 
-    println!("Users: {0}, {1}", user1.get_name(), user2.get_name());
-    println!("Found: {0}, {1}", env.find_user(user1.get_name()), env.find_user(user2.get_name()));
-    //let user3 : User = env.create_user("Alice");
+    env.create_user("Alice");
+    env.create_user("Bob");
+
+    let user1 : &User = env.get_user("Alice").expect("name not found");
+    let user2 : &User = env.get_user("Bob").expect("name not found");
+
+    println!("Users: {0}, {1}", user1.get_name(),user2.get_name());
+    println!("Found: {0}, {1}", env.find_user("Alice"), env.find_user("Bob"));
+    //env.create_user("Alice");
+    let message : Message = user1.create_message("Bob", "Hello, Bob!");
+    println!("{}", message.get_message());
+    env.send_message(message);
 }
