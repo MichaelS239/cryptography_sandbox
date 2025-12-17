@@ -8,6 +8,9 @@ fn main() {
     env.create_user("Alice");
     env.create_user("Bob");
 
+    let key = env.get_mut_user("Bob").expect("name not found").create_keys();
+    env.send_message(key);
+
     let user1 : &User = env.get_user("Alice").expect("name not found");
     let user2 : &User = env.get_user("Bob").expect("name not found");
 
