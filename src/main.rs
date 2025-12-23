@@ -1,6 +1,7 @@
 use cryptography_sandbox::user::User;
 use cryptography_sandbox::env::Env;
 use cryptography_sandbox::message::Message;
+use std::time::UNIX_EPOCH;
 
 fn main() {
     let mut env : Env = Env::new();
@@ -23,4 +24,16 @@ fn main() {
     let user2 : &User = env.get_user("Bob").expect("name not found");
     let received_message : Message = user2.read_last_message();
     println!("User '{0}' got a message from user '{1}': '{2}'",received_message.get_receiver(), received_message.get_sender(), received_message.get_message());
+    println!("Timestamp: {:?}", received_message.get_timestamp().duration_since(UNIX_EPOCH).unwrap());
+    let new_key = env.get_mut_user("Bob").expect("name not found").create_keys();
+    env.send_message(new_key);
+    let user3 : &User = env.get_user("Bob").expect("name not found");
+    let received_message : Message = user3.read_last_message();
+    println!("User '{0}' got a message from user '{1}': '{2}'",received_message.get_receiver(), received_message.get_sender(), received_message.get_message());
+    println!("Timestamp: {:?}", received_message.get_timestamp().duration_since(UNIX_EPOCH).unwrap());
+    let user4 : &mut User = env.get_mut_user("Bob").expect("name not found");
+    user4.delete_last_message();
+    let received_message : Message = user4.read_last_message();
+    println!("User '{0}' got a message from user '{1}': '{2}'",received_message.get_receiver(), received_message.get_sender(), received_message.get_message());
+    println!("Timestamp: {:?}", received_message.get_timestamp().duration_since(UNIX_EPOCH).unwrap());
 }

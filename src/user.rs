@@ -3,16 +3,16 @@ use rand::Rng;
 use num_bigint::BigUint;
 use num_bigint::ToBigUint;
 use num_traits::cast::ToPrimitive;
-use crate::message::Message;
-use crate::message::MessageType;
-use crate::message::PublicKey;
+use crate::message::{Message, MessageType , PublicKey, PrivateKey};
 
 pub struct User {
     name : String,
-    private_key : Option<u128>,
+    private_key_map : HashMap<usize, PrivateKey>,
     public_key : Option<u128>,
     n : Option<u128>,
+    session_key : usize,
     pub(crate) public_key_cache : HashMap<String, PublicKey>,
+    pub(crate) session_key_cache : HashMap<String, usize>,
     pub(crate) message_buffer : Vec<Message>,
 }
 
@@ -20,10 +20,12 @@ impl User {
     pub(crate) fn new(user_name: &str) -> User {
         User {
             name : String::from(user_name),
-            private_key : None,
+            private_key_map : HashMap::new(),
             public_key : None,
             n : None,
+            session_key : 0,
             public_key_cache : HashMap::new(),
+            session_key_cache : HashMap::new(),
             message_buffer : Vec::new(),
         }
     }
@@ -39,19 +41,20 @@ impl User {
     fn decrypt(&self, mes : Message) -> Message {
         match mes.get_message_type() {
             MessageType::Message => {
+                let private_key : &PrivateKey = self.private_key_map.get(&mes.get_session_key()).unwrap();
                 let trimmed_message = mes.get_message().trim();
                 let chunks = trimmed_message.split(' ');
                 let mut decrypted_message : String = String::new();
                 for chunk in chunks {
                     let chunk_num : u128 = chunk.parse().unwrap();
-                    let mut decrypted_num = Self::expmod(chunk_num, self.private_key.unwrap(), self.n.unwrap());
+                    let mut decrypted_num = Self::expmod(chunk_num, private_key.private_exp, private_key.n);
                     while decrypted_num > 0 {
                         let cur_char : char = (decrypted_num % 256) as u8 as char;
                         decrypted_message.push(cur_char);
                         decrypted_num /= 256;
                     }
                 }
-                Message::new(&mes.get_sender(), &mes.get_receiver(), &decrypted_message, mes.get_message_type())
+                Message::new(&mes.get_sender(), mes.get_session_key(), &mes.get_receiver(), &decrypted_message, mes.get_message_type())
             },
             MessageType::PublicKey => {
                 mes.clone()
@@ -122,7 +125,7 @@ impl User {
                 },
             }
         }
-        Message::new(&self.name.clone(), receiver, &encrypted_message, MessageType::Message)
+        Message::new(&self.name.clone(), *self.session_key_cache.get(&receiver_string).unwrap(), receiver, &encrypted_message, MessageType::Message)
     }
 
     pub fn create_keys(&mut self) -> Message {
@@ -139,15 +142,19 @@ impl User {
         let mut x : i128 = 0;
         let mut y : i128 = 0;
         Self::calculate_inverse(self.public_key.unwrap(), eulers_func, &mut x , &mut y);
-        self.private_key = Some((x.rem_euclid(eulers_func as i128)) as u128);
+        let private_exp = (x.rem_euclid(eulers_func as i128)) as u128;
         //println!("{} {}", self.public_key.unwrap(), self.private_key.unwrap());
         /*let big_pub : BigUint = self.public_key.unwrap().to_biguint().unwrap();
         let big_priv : BigUint = self.private_key.unwrap().to_biguint().unwrap();
         let big_eul : BigUint = eulers_func.to_biguint().unwrap();
         let res : BigUint = big_pub * big_priv % big_eul;
         println!("{}", res.to_u128().unwrap());*/
+        self.session_key += 1;
+        let n = self.n.unwrap();
+        let private_key : PrivateKey = PrivateKey {n, private_exp};
+        self.private_key_map.insert(self.session_key, private_key);
         let mes : String = self.n.unwrap().to_string() + " " + &self.public_key.unwrap().to_string();
-        Message::new(&self.name.clone(), "", &mes, MessageType::PublicKey)
+        Message::new(&self.name.clone(), self.session_key, "", &mes, MessageType::PublicKey)
     }
 
     fn generate_prime(lower_bound : u128, upper_bound : u128, first_primes : &Vec<u128>) -> u128 {

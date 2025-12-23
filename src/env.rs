@@ -58,6 +58,7 @@ impl Env {
                 match message.get_message_type() {
                     MessageType::PublicKey => {
                         receiver.public_key_cache.insert(message.get_sender().clone(), Self::to_public_key(message.get_message()));
+                        receiver.session_key_cache.insert(message.get_sender().clone(), message.get_session_key());
                         ()
                     },
                     _ => (),
