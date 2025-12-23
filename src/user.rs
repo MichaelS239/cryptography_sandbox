@@ -31,8 +31,8 @@ impl<T: EncryptionProtocol> User<T> {
         &self.name
     }
 
-    pub fn get_public_key(&self) -> u128 {
-        self.public_key.as_ref().unwrap().public_exp
+    pub fn get_public_key(&self) -> Option<PublicKey> {
+        self.public_key.clone()
     }
 
     fn decrypt_message(&self, mes : Message) -> Message {
@@ -113,5 +113,223 @@ impl<T: EncryptionProtocol> User<T> {
         self.private_key_map.insert(self.session_key, private_key);
         let mes : String = self.public_key.as_ref().unwrap().n.to_string() + " " + &self.public_key.as_ref().unwrap().public_exp.to_string();
         Message::new(&self.name.clone(), self.session_key, "", &mes, MessageType::PublicKey)
+    }
+}
+
+mod tests {
+    use crate::user::User;
+    use crate::rsa::RSA;
+    use crate::message::MessageType;
+
+    #[test]
+    fn test_create_keys() {
+        let mut user : User<RSA> = User::new("Alice");
+        let mes = user.create_keys();
+
+        assert!(user.public_key.is_some());
+        assert!(!user.private_key_map.is_empty());
+        assert_eq!(mes.get_sender(), "Alice");
+        assert_eq!(mes.get_receiver(), "");
+        let is_public_key_type = match mes.get_message_type(){
+            MessageType::Message => false,
+            MessageType::PublicKey => true,
+        };
+        assert!(is_public_key_type);
+
+        let (num, exp) = mes.get_message().split_once(' ').unwrap();
+        let n : u128 = num.parse().unwrap();
+        let public_exp : u128 = exp.parse().unwrap();
+
+        assert_eq!(user.get_public_key().unwrap().n, n);
+        assert_eq!(user.get_public_key().unwrap().public_exp, public_exp);
+    }
+
+    #[test]
+    #[should_panic(expected = "receiver's public key not found")]
+    fn test_nonexisting_receiver() {
+        let user : User<RSA> = User::new("Alice");
+        user.create_message("Bob", "Hello, Bob!");
+    }
+
+    #[test]
+    fn test_send_to_myself() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        assert_eq!(encrypted_message.get_sender(), "Alice");
+        assert_eq!(encrypted_message.get_receiver(), "Alice");
+        assert_eq!(encrypted_message.get_session_key(), 1);
+        let is_message_type = match encrypted_message.get_message_type(){
+            MessageType::Message => true,
+            MessageType::PublicKey => false,
+        };
+        assert!(is_message_type);
+        let decrypted_message = user.decrypt_message(encrypted_message);
+        assert_eq!(decrypted_message.get_message(), "Hello, me!");
+    }
+
+    #[test]
+    fn test_change_keys() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        assert_eq!(user.session_key, 1);
+        assert_eq!(user.private_key_map.len(), 1);
+        assert!(user.private_key_map.contains_key(&1));
+        assert!(!user.private_key_map.contains_key(&2));
+        user.create_keys();
+        assert_eq!(user.session_key, 2);
+        assert_eq!(user.private_key_map.len(), 2);
+        assert!(user.private_key_map.contains_key(&1));
+        assert!(user.private_key_map.contains_key(&2));
+    }
+
+    #[test]
+    fn test_send_to_myself_and_change_keys() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+
+        let decrypted_message = user.decrypt_message(encrypted_message);
+        assert_eq!(decrypted_message.get_message(), "Hello, me!");
+    }
+
+    #[test]
+    fn test_read_last_message() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        assert_eq!(encrypted_message.get_session_key(), 1);
+        user.message_buffer.push(encrypted_message);
+        let decrypted_message = user.read_last_message();
+        assert_eq!(decrypted_message.get_message(), "Hello, me!");
+
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let new_encrypted_message = user.create_message("Alice", "Hello, again!");
+        assert_eq!(new_encrypted_message.get_session_key(), 2);
+        user.message_buffer.push(new_encrypted_message);
+        let new_decrypted_message = user.read_last_message();
+        assert_eq!(new_decrypted_message.get_message(), "Hello, again!");
+    }
+
+    #[test]
+    fn test_read_message() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        user.message_buffer.push(encrypted_message);
+        let decrypted_message = user.read_message(0);
+        assert_eq!(decrypted_message.get_message(), "Hello, me!");
+
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let new_encrypted_message = user.create_message("Alice", "Hello, again!");
+        user.message_buffer.push(new_encrypted_message);
+        let new_decrypted_message = user.read_message(1);
+        assert_eq!(new_decrypted_message.get_message(), "Hello, again!");
+        let old_decrypted_message = user.read_message(0);
+        assert_eq!(old_decrypted_message.get_message(), "Hello, me!");
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_read_message_out_of_bounds() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        user.message_buffer.push(encrypted_message);
+        user.read_message(1);
+    }
+
+    fn setup() -> User<RSA> {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        user.message_buffer.push(encrypted_message);
+
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let new_encrypted_message = user.create_message("Alice", "Hello, again!");
+        user.message_buffer.push(new_encrypted_message);
+
+        user
+    }
+
+    #[test]
+    fn test_read_all_messages() {
+        let mut user : User<RSA> = setup();
+        let another_encrypted_message = user.create_message("Alice", "Hello, there!");
+        user.message_buffer.push(another_encrypted_message);
+        let decrypted_messages = user.read_all_messages();
+        assert_eq!(decrypted_messages.len(), 3);
+        assert_eq!(decrypted_messages[0].get_message(), "Hello, me!");
+        assert_eq!(decrypted_messages[1].get_message(), "Hello, again!");
+        assert_eq!(decrypted_messages[2].get_message(), "Hello, there!");
+    }
+
+    #[test]
+    fn test_delete_last_message() {
+        let mut user : User<RSA> = setup();
+
+        assert_eq!(user.message_buffer.len(), 2);
+        let decrypted_message = user.read_last_message();
+        assert_eq!(decrypted_message.get_message(), "Hello, again!");
+        user.delete_last_message();
+        assert_eq!(user.message_buffer.len(), 1);
+        let old_decrypted_message = user.read_last_message();
+        assert_eq!(old_decrypted_message.get_message(), "Hello, me!");
+    }
+
+    #[test]
+    fn test_delete_message() {
+        let mut user : User<RSA> = setup();
+
+        assert_eq!(user.message_buffer.len(), 2);
+        let decrypted_message = user.read_message(0);
+        assert_eq!(decrypted_message.get_message(), "Hello, me!");
+        user.delete_message(0);
+        assert_eq!(user.message_buffer.len(), 1);
+        let old_decrypted_message = user.read_message(0);
+        assert_eq!(old_decrypted_message.get_message(), "Hello, again!");
+    }
+
+    #[test]
+    #[should_panic(expected = "removal index")]
+    fn test_delete_message_out_of_bounds() {
+        let mut user : User<RSA> = User::new("Alice");
+        user.create_keys();
+        user.public_key_cache.insert("Alice".to_string(), user.public_key.clone().unwrap());
+        user.session_key_cache.insert("Alice".to_string(), user.session_key);
+        let encrypted_message = user.create_message("Alice", "Hello, me!");
+        user.message_buffer.push(encrypted_message);
+        user.delete_message(1);
+    }
+
+    #[test]
+    fn test_delete_all_messages() {
+        let mut user : User<RSA> = setup();
+
+        assert_eq!(user.message_buffer.len(), 2);
+        user.delete_all_messages();
+        assert_eq!(user.message_buffer.len(), 0);
     }
 }

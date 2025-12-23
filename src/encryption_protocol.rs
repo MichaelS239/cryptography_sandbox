@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct PublicKey {
     pub(crate) n : u128,
     pub(crate) public_exp :u128,

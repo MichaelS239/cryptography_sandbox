@@ -145,7 +145,7 @@ impl EncryptionProtocol for RSA {
     fn new() -> Self {
         RSA {}
     }
-    
+
     fn encrypt(message: &str, pub_key: &PublicKey) -> String {
         let mut res : u128 = 0;
         let mut base : u128 = 1;
@@ -193,5 +193,28 @@ impl EncryptionProtocol for RSA {
         let private_key : PrivateKey = PrivateKey {n, private_exp};
 
         (public_key, private_key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::encryption_protocol::EncryptionProtocol;
+    use crate::rsa::RSA;
+
+    #[test]
+    fn test_encrypt_decrypt() {
+        let (public_key, private_key) = RSA::create_keys();
+        let encrypted_message = RSA::encrypt("hello", &public_key);
+        let decrypted_message = RSA::decrypt(&encrypted_message, &private_key);
+        assert_eq!(decrypted_message, "hello");
+    }
+
+    #[test]
+    fn test_identity_encryption() {
+        let (public_key, _private_key) = RSA::create_keys();
+        let mut identity_message  = String::new();
+        identity_message.push(char::from_u32(1).unwrap());
+        let encrypted_message = RSA::encrypt(&identity_message, &public_key);
+        assert_eq!(encrypted_message.as_bytes()[0], b'1');
     }
 }

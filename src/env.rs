@@ -93,3 +93,116 @@ impl<T: EncryptionProtocol> Env<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::Read;
+    use crate::env::Env;
+    use crate::rsa::RSA;
+    use crate::message::{Message, MessageType};
+
+    #[test]
+    fn test_new() {
+        let _env : Env<RSA> = Env::new();
+        assert!(fs::exists("log.txt").unwrap());
+    }
+
+    #[test]
+    fn test_from_file() {
+        let _env : Env<RSA> = Env::from_file("my_crazy_log777.txt");
+        assert!(fs::exists("my_crazy_log777.txt").unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "name should not be empty")]
+    fn test_create_empty_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("");
+    }
+
+    #[test]
+    fn test_create_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        assert!(env.find_user("Alice"));
+    }
+
+    #[test]
+    #[should_panic(expected = "this name is already taken!")]
+    fn test_create_duplicate_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        env.create_user("Alice");
+    }
+
+    #[test]
+    fn test_find_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        env.create_user("Bob");
+        assert!(env.find_user("Alice"));
+        assert!(env.find_user("Bob"));
+        assert!(!env.find_user("Bobb"));
+    }
+
+    #[test]
+    fn test_get_existing_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        assert!(env.get_user("Alice").is_some());
+    }
+
+    #[test]
+    fn test_get_nonexisting_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        assert!(env.get_user("Bob").is_none());
+    }
+
+    #[test]
+    fn test_get_mut_user() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        assert!(env.get_mut_user("Alice").is_some());
+    }
+
+    #[test]
+    fn test_to_public_key() {
+        let key = Env::<RSA>::to_public_key(&String::from("123 456"));
+
+        assert_eq!(key.n, 123);
+        assert_eq!(key.public_exp, 456);
+    }
+
+    #[test]
+    #[should_panic(expected = "sender not found")]
+    fn test_nonexisting_sender() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Bob");
+        let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
+        env.send_message(message);
+    }
+
+    #[test]
+    #[should_panic(expected = "receiver not found")]
+    fn test_nonexisting_receiver() {
+        let mut env : Env<RSA> = Env::new();
+        env.create_user("Alice");
+        let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
+        env.send_message(message);
+    }
+
+    #[test]
+    fn test_log() {
+        let mut env : Env<RSA> = Env::from_file("my_crazy_log777.txt");
+        env.create_user("Alice");
+        env.create_user("Bob");
+        let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
+        env.send_message(message);
+        let mut file = fs::File::open("log.txt").expect("failed to open file");
+        let mut log_message = String::new();
+        let _ = file.read_to_string(&mut log_message);
+        assert!(log_message.contains("sender: 'Alice'; receiver: 'Bob'; message type: 'Message'; message text: 'Hello, Bob!'; session key: '1'; timestamp: '"));
+    }
+}
