@@ -1,4 +1,5 @@
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::fmt;
 
 pub(crate) struct PublicKey {
     pub(crate) n : u128,
@@ -14,6 +15,15 @@ pub(crate) struct PrivateKey {
 pub enum MessageType {
     Message,
     PublicKey,
+}
+
+impl fmt::Display for MessageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MessageType::Message => write!(f, "Message"),
+            MessageType::PublicKey => write!(f, "Public key"),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -60,5 +70,12 @@ impl Message {
 
     pub fn get_timestamp(&self) -> SystemTime {
         self.timestamp.clone()
+    }
+}
+
+impl fmt::Display for Message {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "sender: '{}'; receiver: '{}'; message type: '{}'; message text: '{}'; session key: '{}'; timestamp: '{:?}'",
+        self.sender, self.receiver, self.message_type, self.message, self.session_key, self.timestamp.duration_since(UNIX_EPOCH).unwrap())
     }
 }

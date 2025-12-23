@@ -4,7 +4,7 @@ use cryptography_sandbox::message::Message;
 use std::time::UNIX_EPOCH;
 
 fn main() {
-    let mut env : Env = Env::new();
+    let mut env : Env = Env::from_file("my_log.txt");
 
     env.create_user("Alice");
     env.create_user("Bob");
@@ -36,4 +36,5 @@ fn main() {
     let received_message : Message = user4.read_last_message();
     println!("User '{0}' got a message from user '{1}': '{2}'",received_message.get_receiver(), received_message.get_sender(), received_message.get_message());
     println!("Timestamp: {:?}", received_message.get_timestamp().duration_since(UNIX_EPOCH).unwrap());
+    println!("{}", received_message);
 }

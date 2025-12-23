@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
 use crate::user::User;
 use crate::message::Message;
 use crate::message::MessageType;
@@ -6,14 +8,31 @@ use crate::message::PublicKey;
 
 pub struct Env {
     users : HashMap<String, User>,
-    log : Vec<Message>,
+    log : fs::File,
 }
 
 impl Env {
     pub fn new() -> Env {
         Env {
             users : HashMap::new(),
-            log : Vec::new(),
+            log : fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(true)
+                .open("log.txt")
+                .expect("failed to open file"),
+        }
+    }
+
+    pub fn from_file(file_name : &str) -> Env {
+        Env {
+            users : HashMap::new(),
+            log : fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(true)
+                .open(file_name)
+                .expect("failed to open file"),
         }
     }
 
@@ -52,7 +71,7 @@ impl Env {
             panic!("sender not found");
         }
         else if message.get_receiver().is_empty() {
-            self.log.push(message.clone());
+            let _ = writeln!(self.log, "{}", message.clone());
             for (_, receiver) in &mut self.users {
                 receiver.message_buffer.push(message.clone());
                 match message.get_message_type() {
@@ -69,7 +88,7 @@ impl Env {
             panic!("receiver not found");
         }
         else{
-            self.log.push(message.clone());
+            let _ = writeln!(self.log, "{}", message.clone());
             let receiver : &mut User = self.users.get_mut(message.get_receiver()).unwrap();
             receiver.message_buffer.push(message);
         }
