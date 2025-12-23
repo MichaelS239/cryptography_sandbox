@@ -2,18 +2,17 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use crate::user::User;
-use crate::message::Message;
-use crate::message::MessageType;
-use crate::message::PublicKey;
+use crate::message::{Message, MessageType};
+use crate::encryption_protocol::{EncryptionProtocol, PublicKey};
 
-pub struct Env {
-    users : HashMap<String, User>,
+pub struct Env<T: EncryptionProtocol> {
+    users : HashMap<String, User<T>>,
     log : fs::File,
 }
 
-impl Env {
-    pub fn new() -> Env {
-        Env {
+impl<T: EncryptionProtocol> Env<T> {
+    pub fn new() -> Self {
+        Self {
             users : HashMap::new(),
             log : fs::OpenOptions::new()
                 .write(true)
@@ -24,8 +23,8 @@ impl Env {
         }
     }
 
-    pub fn from_file(file_name : &str) -> Env {
-        Env {
+    pub fn from_file(file_name : &str) -> Self {
+        Self {
             users : HashMap::new(),
             log : fs::OpenOptions::new()
                 .write(true)
@@ -42,15 +41,15 @@ impl Env {
         }
         match self.users.get(&String::from(user_name)) {
             Some(_) => panic!("this name is already taken!"),
-            None => self.users.insert(String::from(user_name), User::new(user_name))
+            None => self.users.insert(String::from(user_name), User::<T>::new(user_name))
         };
     }
 
-    pub fn get_user(&self, user_name: &str) -> Option<&User> {
+    pub fn get_user(&self, user_name: &str) -> Option<&User<T>> {
         self.users.get(&String::from(user_name))
     }
 
-    pub fn get_mut_user(&mut self, user_name: &str) -> Option<&mut User> {
+    pub fn get_mut_user(&mut self, user_name: &str) -> Option<&mut User<T>> {
         self.users.get_mut(&String::from(user_name))
     }
 
@@ -89,7 +88,7 @@ impl Env {
         }
         else{
             let _ = writeln!(self.log, "{}", message.clone());
-            let receiver : &mut User = self.users.get_mut(message.get_receiver()).unwrap();
+            let receiver : &mut User<T> = self.users.get_mut(message.get_receiver()).unwrap();
             receiver.message_buffer.push(message);
         }
     }

@@ -1,16 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::fmt;
 
-pub(crate) struct PublicKey {
-    pub(crate) n : u128,
-    pub(crate) public_exp :u128,
-}
-
-pub(crate) struct PrivateKey {
-    pub(crate) n : u128,
-    pub(crate) private_exp :u128,
-}
-
 #[derive(Clone)]
 pub enum MessageType {
     Message,
