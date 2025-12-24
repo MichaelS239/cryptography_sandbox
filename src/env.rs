@@ -184,7 +184,7 @@ mod tests {
         env.create_user("Bob");
         let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
         env.send_message(message);
-        let mut file = fs::File::open("log.txt").expect("failed to open file");
+        let mut file = fs::File::open("my_crazy_log777.txt").expect("failed to open file");
         let mut log_message = String::new();
         let _ = file.read_to_string(&mut log_message);
         assert!(log_message.contains("sender: 'Alice'; receiver: 'Bob'; message type: 'Message'; message text: 'Hello, Bob!'; session key: '1'; timestamp: '"));
