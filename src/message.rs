@@ -1,5 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::fmt;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub enum MessageType {
@@ -18,23 +18,29 @@ impl fmt::Display for MessageType {
 
 #[derive(Clone)]
 pub struct Message {
-    sender : String,
-    session_key : usize,
-    receiver : String,
-    message : String,
-    message_type : MessageType,
-    timestamp : SystemTime,
+    sender: String,
+    session_key: usize,
+    receiver: String,
+    message: String,
+    message_type: MessageType,
+    timestamp: SystemTime,
 }
 
 impl Message {
-    pub(crate) fn new(sender : &str, session_key : usize, receiver : &str, message : &str, message_type : MessageType) -> Message {
+    pub(crate) fn new(
+        sender: &str,
+        session_key: usize,
+        receiver: &str,
+        message: &str,
+        message_type: MessageType,
+    ) -> Message {
         Message {
-            sender : String::from(sender),
-            session_key : session_key,
-            receiver : String::from(receiver),
-            message : String::from(message),
-            message_type : message_type,
-            timestamp : SystemTime::now(),
+            sender: String::from(sender),
+            session_key: session_key,
+            receiver: String::from(receiver),
+            message: String::from(message),
+            message_type: message_type,
+            timestamp: SystemTime::now(),
         }
     }
 
@@ -65,7 +71,15 @@ impl Message {
 
 impl fmt::Display for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "sender: '{}'; receiver: '{}'; message type: '{}'; message text: '{}'; session key: '{}'; timestamp: '{:?}'",
-        self.sender, self.receiver, self.message_type, self.message, self.session_key, self.timestamp.duration_since(UNIX_EPOCH).unwrap())
+        write!(
+            f,
+            "sender: '{}'; receiver: '{}'; message type: '{}'; message text: '{}'; session key: '{}'; timestamp: '{:?}'",
+            self.sender,
+            self.receiver,
+            self.message_type,
+            self.message,
+            self.session_key,
+            self.timestamp.duration_since(UNIX_EPOCH).unwrap()
+        )
     }
 }

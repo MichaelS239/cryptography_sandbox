@@ -1,20 +1,20 @@
+use crate::encryption_protocol::EncryptionProtocol;
+use crate::message::{Message, MessageType};
+use crate::user::User;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
-use crate::user::User;
-use crate::message::{Message, MessageType};
-use crate::encryption_protocol::EncryptionProtocol;
 
 pub struct Env<T: EncryptionProtocol> {
-    users : HashMap<String, User<T>>,
-    log : fs::File,
+    users: HashMap<String, User<T>>,
+    log: fs::File,
 }
 
 impl<T: EncryptionProtocol> Env<T> {
     pub fn new() -> Self {
         Self {
-            users : HashMap::new(),
-            log : fs::OpenOptions::new()
+            users: HashMap::new(),
+            log: fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .append(true)
@@ -23,10 +23,10 @@ impl<T: EncryptionProtocol> Env<T> {
         }
     }
 
-    pub fn from_file(file_name : &str) -> Self {
+    pub fn from_file(file_name: &str) -> Self {
         Self {
-            users : HashMap::new(),
-            log : fs::OpenOptions::new()
+            users: HashMap::new(),
+            log: fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .append(true)
@@ -41,7 +41,9 @@ impl<T: EncryptionProtocol> Env<T> {
         }
         match self.users.get(&String::from(user_name)) {
             Some(_) => panic!("this name is already taken!"),
-            None => self.users.insert(String::from(user_name), User::<T>::new(user_name))
+            None => self
+                .users
+                .insert(String::from(user_name), User::<T>::new(user_name)),
         };
     }
 
@@ -57,30 +59,32 @@ impl<T: EncryptionProtocol> Env<T> {
         self.users.contains_key(&String::from(user_name))
     }
 
-    pub fn send_message(&mut self, message : Message) {
+    pub fn send_message(&mut self, message: Message) {
         if !self.users.contains_key(message.get_sender()) {
             panic!("sender not found");
-        }
-        else if message.get_receiver().is_empty() {
+        } else if message.get_receiver().is_empty() {
             let _ = writeln!(self.log, "{}", message.clone());
             for (_, receiver) in &mut self.users {
                 receiver.message_buffer.push(message.clone());
                 match message.get_message_type() {
                     MessageType::PublicKey => {
-                        receiver.public_key_cache.insert(message.get_sender().clone(), T::to_public_key(message.get_message()));
-                        receiver.session_key_cache.insert(message.get_sender().clone(), message.get_session_key());
+                        receiver.public_key_cache.insert(
+                            message.get_sender().clone(),
+                            T::to_public_key(message.get_message()),
+                        );
+                        receiver
+                            .session_key_cache
+                            .insert(message.get_sender().clone(), message.get_session_key());
                         ()
-                    },
+                    }
                     _ => (),
                 }
             }
-        }
-        else if !self.users.contains_key(message.get_receiver()) {
+        } else if !self.users.contains_key(message.get_receiver()) {
             panic!("receiver not found");
-        }
-        else{
+        } else {
             let _ = writeln!(self.log, "{}", message.clone());
-            let receiver : &mut User<T> = self.users.get_mut(message.get_receiver()).unwrap();
+            let receiver: &mut User<T> = self.users.get_mut(message.get_receiver()).unwrap();
             receiver.message_buffer.push(message);
         }
     }
@@ -88,34 +92,34 @@ impl<T: EncryptionProtocol> Env<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::env::Env;
+    use crate::message::{Message, MessageType};
+    use crate::rsa::RSA;
     use std::fs;
     use std::io::Read;
-    use crate::env::Env;
-    use crate::rsa::RSA;
-    use crate::message::{Message, MessageType};
 
     #[test]
     fn test_new() {
-        let _env : Env<RSA> = Env::new();
+        let _env: Env<RSA> = Env::new();
         assert!(fs::exists("log.txt").unwrap());
     }
 
     #[test]
     fn test_from_file() {
-        let _env : Env<RSA> = Env::from_file("my_crazy_log777.txt");
+        let _env: Env<RSA> = Env::from_file("my_crazy_log777.txt");
         assert!(fs::exists("my_crazy_log777.txt").unwrap());
     }
 
     #[test]
     #[should_panic(expected = "name should not be empty")]
     fn test_create_empty_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("");
     }
 
     #[test]
     fn test_create_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         assert!(env.find_user("Alice"));
     }
@@ -123,14 +127,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "this name is already taken!")]
     fn test_create_duplicate_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         env.create_user("Alice");
     }
 
     #[test]
     fn test_find_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         env.create_user("Bob");
         assert!(env.find_user("Alice"));
@@ -140,21 +144,21 @@ mod tests {
 
     #[test]
     fn test_get_existing_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         assert!(env.get_user("Alice").is_some());
     }
 
     #[test]
     fn test_get_nonexisting_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         assert!(env.get_user("Bob").is_none());
     }
 
     #[test]
     fn test_get_mut_user() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         assert!(env.get_mut_user("Alice").is_some());
     }
@@ -162,7 +166,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "sender not found")]
     fn test_nonexisting_sender() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Bob");
         let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
         env.send_message(message);
@@ -171,7 +175,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "receiver not found")]
     fn test_nonexisting_receiver() {
-        let mut env : Env<RSA> = Env::new();
+        let mut env: Env<RSA> = Env::new();
         env.create_user("Alice");
         let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
         env.send_message(message);
@@ -179,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_log() {
-        let mut env : Env<RSA> = Env::from_file("my_crazy_log777.txt");
+        let mut env: Env<RSA> = Env::from_file("my_crazy_log777.txt");
         env.create_user("Alice");
         env.create_user("Bob");
         let message = Message::new("Alice", 1, "Bob", "Hello, Bob!", MessageType::Message);
