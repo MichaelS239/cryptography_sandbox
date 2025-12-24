@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use crate::message::{Message, MessageType};
-use crate::encryption_protocol::{EncryptionProtocol, PublicKey, PrivateKey};
+use crate::encryption_protocol::EncryptionProtocol;
 
 pub struct User<T: EncryptionProtocol> {
-    protocol : T,
     name : String,
-    private_key_map : HashMap<usize, PrivateKey>,
-    public_key : Option<PublicKey>,
+    private_key_map : HashMap<usize, T::PrivateKey>,
+    public_key : Option<T::PublicKey>,
     session_key : usize,
-    pub(crate) public_key_cache : HashMap<String, PublicKey>,
+    pub(crate) public_key_cache : HashMap<String, T::PublicKey>,
     pub(crate) session_key_cache : HashMap<String, usize>,
     pub(crate) message_buffer : Vec<Message>,
 }
@@ -16,7 +15,6 @@ pub struct User<T: EncryptionProtocol> {
 impl<T: EncryptionProtocol> User<T> {
     pub(crate) fn new(user_name: &str) -> Self {
         Self {
-            protocol : T::new(),
             name : String::from(user_name),
             private_key_map : HashMap::new(),
             public_key : None,
@@ -31,14 +29,14 @@ impl<T: EncryptionProtocol> User<T> {
         &self.name
     }
 
-    pub fn get_public_key(&self) -> Option<PublicKey> {
-        self.public_key.clone()
+    pub fn get_public_key(&self) -> Option<&T::PublicKey> {
+        self.public_key.as_ref()
     }
 
     fn decrypt_message(&self, mes : Message) -> Message {
         match mes.get_message_type() {
             MessageType::Message => {
-                let private_key : &PrivateKey = self.private_key_map.get(&mes.get_session_key()).unwrap();
+                let private_key : &T::PrivateKey = self.private_key_map.get(&mes.get_session_key()).unwrap();
                 let trimmed_message = mes.get_message().trim();
                 let chunks = trimmed_message.split(' ');
                 let mut decrypted_message : String = String::new();
@@ -111,11 +109,12 @@ impl<T: EncryptionProtocol> User<T> {
         self.session_key += 1;
         self.public_key = Some(public_key);
         self.private_key_map.insert(self.session_key, private_key);
-        let mes : String = self.public_key.as_ref().unwrap().n.to_string() + " " + &self.public_key.as_ref().unwrap().public_exp.to_string();
+        let mes : String = T::to_string(self.public_key.as_ref().unwrap());
         Message::new(&self.name.clone(), self.session_key, "", &mes, MessageType::PublicKey)
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::user::User;
     use crate::rsa::RSA;

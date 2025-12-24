@@ -2,7 +2,18 @@ use rand::Rng;
 use num_bigint::BigUint;
 use num_bigint::ToBigUint;
 use num_traits::cast::ToPrimitive;
-use crate::encryption_protocol::{EncryptionProtocol, PublicKey, PrivateKey};
+use crate::encryption_protocol::EncryptionProtocol;
+
+#[derive(Clone)]
+pub struct PublicKey {
+    pub(crate) n : u128,
+    pub(crate) public_exp :u128,
+}
+
+pub struct PrivateKey {
+    pub(crate) n : u128,
+    pub(crate) private_exp :u128,
+}
 
 pub struct RSA {}
 
@@ -142,9 +153,8 @@ impl RSA {
 }
 
 impl EncryptionProtocol for RSA {
-    fn new() -> Self {
-        RSA {}
-    }
+    type PublicKey = PublicKey;
+    type PrivateKey = PrivateKey;
 
     fn encrypt(message: &str, pub_key: &PublicKey) -> String {
         let mut res : u128 = 0;
@@ -194,12 +204,24 @@ impl EncryptionProtocol for RSA {
 
         (public_key, private_key)
     }
+
+    fn to_public_key(message : &String) -> PublicKey {
+        let (num, exp) = message.split_once(' ').unwrap();
+        let n : u128 = num.parse().unwrap();
+        let public_exp : u128 = exp.parse().unwrap();
+
+        PublicKey {n, public_exp}
+    }
+
+    fn to_string(pub_key : &Self::PublicKey) -> String {
+        pub_key.n.to_string() + " " + &pub_key.public_exp.to_string()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::encryption_protocol::EncryptionProtocol;
-    use crate::rsa::RSA;
+    use crate::rsa::{RSA, PublicKey};
 
     #[test]
     fn test_encrypt_decrypt() {
@@ -216,5 +238,21 @@ mod tests {
         identity_message.push(char::from_u32(1).unwrap());
         let encrypted_message = RSA::encrypt(&identity_message, &public_key);
         assert_eq!(encrypted_message.as_bytes()[0], b'1');
+    }
+
+    #[test]
+    fn test_to_public_key() {
+        let key = RSA::to_public_key(&String::from("123 456"));
+
+        assert_eq!(key.n, 123);
+        assert_eq!(key.public_exp, 456);
+    }
+
+    #[test]
+    fn test_to_string() {
+        let key = PublicKey {n: 123_u128, public_exp: 456_u128};
+        let mes = RSA::to_string(&key);
+
+        assert_eq!(mes, "123 456");
     }
 }

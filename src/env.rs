@@ -3,7 +3,7 @@ use std::fs;
 use std::io::Write;
 use crate::user::User;
 use crate::message::{Message, MessageType};
-use crate::encryption_protocol::{EncryptionProtocol, PublicKey};
+use crate::encryption_protocol::EncryptionProtocol;
 
 pub struct Env<T: EncryptionProtocol> {
     users : HashMap<String, User<T>>,
@@ -57,14 +57,6 @@ impl<T: EncryptionProtocol> Env<T> {
         self.users.contains_key(&String::from(user_name))
     }
 
-    fn to_public_key(message : &String) -> PublicKey {
-        let (num, exp) = message.split_once(' ').unwrap();
-        let n : u128 = num.parse().unwrap();
-        let public_exp : u128 = exp.parse().unwrap();
-
-        PublicKey {n, public_exp}
-    }
-
     pub fn send_message(&mut self, message : Message) {
         if !self.users.contains_key(message.get_sender()) {
             panic!("sender not found");
@@ -75,7 +67,7 @@ impl<T: EncryptionProtocol> Env<T> {
                 receiver.message_buffer.push(message.clone());
                 match message.get_message_type() {
                     MessageType::PublicKey => {
-                        receiver.public_key_cache.insert(message.get_sender().clone(), Self::to_public_key(message.get_message()));
+                        receiver.public_key_cache.insert(message.get_sender().clone(), T::to_public_key(message.get_message()));
                         receiver.session_key_cache.insert(message.get_sender().clone(), message.get_session_key());
                         ()
                     },
@@ -165,14 +157,6 @@ mod tests {
         let mut env : Env<RSA> = Env::new();
         env.create_user("Alice");
         assert!(env.get_mut_user("Alice").is_some());
-    }
-
-    #[test]
-    fn test_to_public_key() {
-        let key = Env::<RSA>::to_public_key(&String::from("123 456"));
-
-        assert_eq!(key.n, 123);
-        assert_eq!(key.public_exp, 456);
     }
 
     #[test]
