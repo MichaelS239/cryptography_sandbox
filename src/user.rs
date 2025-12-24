@@ -45,9 +45,9 @@ impl<T: EncryptionProtocol> User<T> {
                     decrypted_message += &T::decrypt(chunk, private_key);
                 }
                 Message::new(
-                    &mes.get_sender(),
+                    mes.get_sender(),
                     mes.get_session_key(),
-                    &mes.get_receiver(),
+                    mes.get_receiver(),
                     &decrypted_message,
                     mes.get_message_type(),
                 )
@@ -58,20 +58,19 @@ impl<T: EncryptionProtocol> User<T> {
 
     pub fn read_last_message(&self) -> Message {
         User::<T>::decrypt_message(
-            &self,
+            self,
             self.message_buffer[self.message_buffer.len() - 1].clone(),
         )
     }
 
     pub fn read_message(&self, index: usize) -> Message {
-        User::<T>::decrypt_message(&self, self.message_buffer[index].clone())
+        User::<T>::decrypt_message(self, self.message_buffer[index].clone())
     }
 
     pub fn read_all_messages(&self) -> Vec<Message> {
-        let mut messages: Vec<Message> = Vec::new();
-        messages.reserve(self.message_buffer.len());
+        let mut messages: Vec<Message> = Vec::with_capacity(self.message_buffer.len());
         for message in &self.message_buffer {
-            messages.push(User::<T>::decrypt_message(&self, message.clone()));
+            messages.push(User::<T>::decrypt_message(self, message.clone()));
         }
         messages
     }
@@ -102,10 +101,10 @@ impl<T: EncryptionProtocol> User<T> {
                 Some(_) => {
                     let (head, tail) = split.unwrap();
                     cur_mes = tail;
-                    encrypted_message += &(T::encrypt(head, &pub_key) + " ");
+                    encrypted_message += &(T::encrypt(head, pub_key) + " ");
                 }
                 None => {
-                    encrypted_message += &(T::encrypt(cur_mes, &pub_key) + " ");
+                    encrypted_message += &(T::encrypt(cur_mes, pub_key) + " ");
                 }
             }
         }

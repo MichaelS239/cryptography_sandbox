@@ -15,7 +15,6 @@ impl<T: EncryptionProtocol> Env<T> {
         Self {
             users: HashMap::new(),
             log: fs::OpenOptions::new()
-                .write(true)
                 .create(true)
                 .append(true)
                 .open("log.txt")
@@ -27,7 +26,6 @@ impl<T: EncryptionProtocol> Env<T> {
         Self {
             users: HashMap::new(),
             log: fs::OpenOptions::new()
-                .write(true)
                 .create(true)
                 .append(true)
                 .open(file_name)
@@ -64,20 +62,16 @@ impl<T: EncryptionProtocol> Env<T> {
             panic!("sender not found");
         } else if message.get_receiver().is_empty() {
             let _ = writeln!(self.log, "{}", message.clone());
-            for (_, receiver) in &mut self.users {
+            for receiver in self.users.values_mut() {
                 receiver.message_buffer.push(message.clone());
-                match message.get_message_type() {
-                    MessageType::PublicKey => {
-                        receiver.public_key_cache.insert(
-                            message.get_sender().clone(),
-                            T::to_public_key(message.get_message()),
-                        );
-                        receiver
-                            .session_key_cache
-                            .insert(message.get_sender().clone(), message.get_session_key());
-                        ()
-                    }
-                    _ => (),
+                if let MessageType::PublicKey = message.get_message_type() {
+                    receiver.public_key_cache.insert(
+                        message.get_sender().clone(),
+                        T::to_public_key(message.get_message()),
+                    );
+                    receiver
+                        .session_key_cache
+                        .insert(message.get_sender().clone(), message.get_session_key());
                 }
             }
         } else if !self.users.contains_key(message.get_receiver()) {
@@ -87,6 +81,12 @@ impl<T: EncryptionProtocol> Env<T> {
             let receiver: &mut User<T> = self.users.get_mut(message.get_receiver()).unwrap();
             receiver.message_buffer.push(message);
         }
+    }
+}
+
+impl<T: EncryptionProtocol> Default for Env<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

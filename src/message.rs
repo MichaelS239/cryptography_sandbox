@@ -36,10 +36,10 @@ impl Message {
     ) -> Message {
         Message {
             sender: String::from(sender),
-            session_key: session_key,
+            session_key,
             receiver: String::from(receiver),
             message: String::from(message),
-            message_type: message_type,
+            message_type,
             timestamp: SystemTime::now(),
         }
     }
@@ -65,7 +65,7 @@ impl Message {
     }
 
     pub fn get_timestamp(&self) -> SystemTime {
-        self.timestamp.clone()
+        self.timestamp
     }
 }
 

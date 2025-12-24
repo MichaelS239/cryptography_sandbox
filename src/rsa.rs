@@ -24,7 +24,7 @@ impl RSA {
 
             let mut is_divided = false;
             for prime in first_primes {
-                if prime_candidate % prime == 0 {
+                if prime_candidate.is_multiple_of(*prime) {
                     is_divided = true;
                     break;
                 }
@@ -64,7 +64,7 @@ impl RSA {
     fn rabin_miller_test(prime_candidate: u128) -> bool {
         let mut max_divisions_by_two: usize = 0;
         let mut even_component = prime_candidate - 1;
-        while even_component % 2 == 0 {
+        while even_component.is_multiple_of(2) {
             even_component /= 2;
             max_divisions_by_two += 1;
         }
@@ -110,7 +110,7 @@ impl RSA {
             return 1;
         }
 
-        if exp % 2 == 0 {
+        if exp.is_multiple_of(2) {
             let expm: u128 = Self::expmod(base, exp / 2, modulo);
             let big_expm: BigUint = expm.to_biguint().unwrap();
             let big_modulo: BigUint = modulo.to_biguint().unwrap();
@@ -209,7 +209,7 @@ impl EncryptionProtocol for RSA {
         (public_key, private_key)
     }
 
-    fn to_public_key(message: &String) -> PublicKey {
+    fn to_public_key(message: &str) -> PublicKey {
         let (num, exp) = message.split_once(' ').unwrap();
         let n: u128 = num.parse().unwrap();
         let public_exp: u128 = exp.parse().unwrap();
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn test_to_public_key() {
-        let key = RSA::to_public_key(&String::from("123 456"));
+        let key = RSA::to_public_key("123 456");
 
         assert_eq!(key.n, 123);
         assert_eq!(key.public_exp, 456);
