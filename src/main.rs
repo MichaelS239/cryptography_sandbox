@@ -12,7 +12,7 @@ fn main() {
     env.create_user("Alice");
     env.create_user("Bob");
 
-    // To be able to receivq encrypted messages, Bob creates a public/private key pair.
+    // To be able to receive encrypted messages, Bob creates a public/private key pair.
     // The public key is returned in a message; the private key is secret and is known only by Bob.
     let key = env
         .get_mut_user("Bob")

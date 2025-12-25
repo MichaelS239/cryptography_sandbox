@@ -1,20 +1,36 @@
+//! Implementaion of RSA encryption protocol
+//!
+//! This module contains the implementation of the trait `EncryptionProtocol`.
 use crate::encryption_protocol::EncryptionProtocol;
 use num_bigint::BigUint;
 use num_bigint::ToBigUint;
 use num_traits::cast::ToPrimitive;
 use rand::Rng;
 
+/// Struct for public key in RSA.
+///
+/// RSA public key consists of a number `n = p * q` (`p, q` - primes)
+/// and a public exponent `e < n` (`gcd(e, \phi(n)) = 1`,
+/// `e * d % \phi(n) = 1`, `d` - private exponent, `\phi(n)` - Euler's function).
 #[derive(Clone)]
 pub struct PublicKey {
     pub(crate) n: u128,
     pub(crate) public_exp: u128,
 }
 
+/// Struct for private key in RSA.
+///
+/// RSA private key consists of a number `n = p * q` (`p, q` - primes)
+/// and a private exponent `d < n` (`e * d % \phi(n) = 1`, `e` - public exponent,
+/// `\phi(n)` - Euler's function).
 pub struct PrivateKey {
     pub(crate) n: u128,
     pub(crate) private_exp: u128,
 }
 
+/// Implementation of the trait `EncryptionProtocol`.
+///
+/// Contains helper methods for creating keys and the implementation of trait methods.
 pub struct RSA {}
 
 impl RSA {
@@ -157,9 +173,13 @@ impl RSA {
 }
 
 impl EncryptionProtocol for RSA {
+    /// Implementation of `PublicKey` for RSA is used.
     type PublicKey = PublicKey;
+    /// Implementation of `PrivateKey` for RSA is used.
     type PrivateKey = PrivateKey;
 
+    /// The message is encrypted using RSA protocol: `m -> m^e % n`
+    /// (`m` - message, `e` - public exponent).
     fn encrypt(message: &str, pub_key: &PublicKey) -> String {
         let mut res: u128 = 0;
         let mut base: u128 = 1;
@@ -173,6 +193,8 @@ impl EncryptionProtocol for RSA {
         encrypted_res.to_string()
     }
 
+    /// The message is decrypted using RSA protocol: `m -> m^d % n`
+    /// (`m` - message, `d` - private exponent).
     fn decrypt(message: &str, priv_key: &PrivateKey) -> String {
         let message_num: u128 = message.parse().unwrap();
         let mut decrypted_num = Self::expmod(message_num, priv_key.private_exp, priv_key.n);
@@ -186,6 +208,11 @@ impl EncryptionProtocol for RSA {
         decrypted_message
     }
 
+    /// The method generates 128-bit keys for RSA.
+    ///
+    /// The method generates two prime numbers `p` and `q`,
+    /// calculates `n = p * q`, chooses a public exponent `e`
+    /// and calculates the private exponent: `e * d % \phi(n) = 1`.
     fn create_keys() -> (PublicKey, PrivateKey) {
         let lower_bound: u128 = 2_u128.pow(62) + 1;
         let upper_bound: u128 = 2_u128.pow(63) - 1;
@@ -209,6 +236,7 @@ impl EncryptionProtocol for RSA {
         (public_key, private_key)
     }
 
+    /// Parses a string `"a b"` to public key (`n = a, e = b`).
     fn to_public_key(message: &str) -> PublicKey {
         let (num, exp) = message.split_once(' ').unwrap();
         let n: u128 = num.parse().unwrap();
@@ -217,6 +245,7 @@ impl EncryptionProtocol for RSA {
         PublicKey { n, public_exp }
     }
 
+    /// Creates a string from public key: `n, e -> "n e"`.
     fn to_string(pub_key: &Self::PublicKey) -> String {
         pub_key.n.to_string() + " " + &pub_key.public_exp.to_string()
     }

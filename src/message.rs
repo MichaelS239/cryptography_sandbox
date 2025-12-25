@@ -1,9 +1,19 @@
+//! Infrastructure for messages
+//!
+//! This module contains a struct for messages and a enum for message types.
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Type of the message.
+///
+/// A message can have two types:
+/// 1. Ordinary message
+/// 2. Public key
 #[derive(Clone)]
 pub enum MessageType {
+    /// Ordinary message (it is sent only to the receiver).
     Message,
+    /// Public key (it is broadcasted to all users).
     PublicKey,
 }
 
@@ -16,6 +26,10 @@ impl fmt::Display for MessageType {
     }
 }
 
+/// Message struct.
+///
+/// Contains information about sender, session key, receiver, text of the message,
+/// message type and timestamp.
 #[derive(Clone)]
 pub struct Message {
     sender: String,
@@ -44,6 +58,7 @@ impl Message {
         }
     }
 
+    /// Returns the name of the sender.
     pub fn get_sender(&self) -> &String {
         &self.sender
     }
@@ -52,18 +67,22 @@ impl Message {
         self.session_key
     }
 
+    /// Returns the name of the receiver.
     pub fn get_receiver(&self) -> &String {
         &self.receiver
     }
 
+    /// Returns the text of the message.
     pub fn get_message(&self) -> &String {
         &self.message
     }
 
+    /// Returns the message type.
     pub fn get_message_type(&self) -> MessageType {
         self.message_type.clone()
     }
 
+    /// Returns the timestamp of the message.
     pub fn get_timestamp(&self) -> SystemTime {
         self.timestamp
     }

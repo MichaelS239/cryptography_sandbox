@@ -1,7 +1,17 @@
+//! User infrastructure
+//!
+//! A user is responsible for creating keys, creating and reading messages.
 use crate::encryption_protocol::EncryptionProtocol;
 use crate::message::{Message, MessageType};
 use std::collections::HashMap;
 
+/// User struct.
+///
+/// A user is responsible for creating keys, creating and reading messages.
+/// It can create new public/private key pairs, create encrypted messages
+/// using known public keys of other users. A user also maintains the buffer
+/// of received messages: it can read a specific message using their own
+/// private key or delete a message from the buffer.
 pub struct User<T: EncryptionProtocol> {
     name: String,
     private_key_map: HashMap<usize, T::PrivateKey>,
@@ -25,10 +35,12 @@ impl<T: EncryptionProtocol> User<T> {
         }
     }
 
+    /// Returns the name of the user.
     pub fn get_name(&self) -> &String {
         &self.name
     }
 
+    /// Returns the public key of the user.
     pub fn get_public_key(&self) -> Option<&T::PublicKey> {
         self.public_key.as_ref()
     }
@@ -56,6 +68,7 @@ impl<T: EncryptionProtocol> User<T> {
         }
     }
 
+    /// Reads the last message from the buffer.
     pub fn read_last_message(&self) -> Message {
         User::<T>::decrypt_message(
             self,
@@ -63,10 +76,12 @@ impl<T: EncryptionProtocol> User<T> {
         )
     }
 
+    /// Reads the message by its index in the buffer.
     pub fn read_message(&self, index: usize) -> Message {
         User::<T>::decrypt_message(self, self.message_buffer[index].clone())
     }
 
+    /// Reads all messages from the buffer.
     pub fn read_all_messages(&self) -> Vec<Message> {
         let mut messages: Vec<Message> = Vec::with_capacity(self.message_buffer.len());
         for message in &self.message_buffer {
@@ -75,18 +90,26 @@ impl<T: EncryptionProtocol> User<T> {
         messages
     }
 
+    /// Deletes last message from the buffer.
     pub fn delete_last_message(&mut self) {
         self.message_buffer.pop();
     }
 
+    /// Deletes the message by its index in the buffer.
     pub fn delete_message(&mut self, index: usize) {
         self.message_buffer.remove(index);
     }
 
+    /// Deletes all messages from the buffer.
     pub fn delete_all_messages(&mut self) {
         self.message_buffer.clear();
     }
 
+    /// Creates an encrypted message.
+    ///
+    /// Accepts the name of the receiver and the text of the message as parameters.
+    /// If the public key of the receiver is known by the user, the message
+    /// is encrypted using this key.
     pub fn create_message(&self, receiver: &str, message: &str) -> Message {
         let receiver_string: String = String::from(receiver);
         if !self.public_key_cache.contains_key(&receiver_string) {
@@ -117,6 +140,10 @@ impl<T: EncryptionProtocol> User<T> {
         )
     }
 
+    /// Creates new public/private key pair.
+    ///
+    /// Note that the resulting message should be broadcasted to all users
+    /// through the environment in order for the user to be able to receive encrypted messages.
     pub fn create_keys(&mut self) -> Message {
         let (public_key, private_key) = T::create_keys();
         self.session_key += 1;

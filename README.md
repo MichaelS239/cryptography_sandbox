@@ -13,7 +13,7 @@ This is a library for simulating the process of secure communication. The librar
 
 # Usage example
 
-The following code shows a simple usage example. The extended example is located in `main.rs`.
+The following code shows a simple usage example. The extended version of this example is located in `main.rs`.
 ```rust
 use cryptography_sandbox::env::Env;
 use cryptography_sandbox::message::Message;
@@ -29,7 +29,7 @@ fn main() {
     env.create_user("Alice");
     env.create_user("Bob");
 
-    // To be able to receivq encrypted messages, Bob creates a public/private key pair.
+    // To be able to receive encrypted messages, Bob creates a public/private key pair.
     // The public key is returned in a message; the private key is secret and is known only by Bob.
     let key = env
         .get_mut_user("Bob")
@@ -111,4 +111,9 @@ If you want to use the library in your own project, add the following lines to y
 ```
 [dependencies]
 cryptography_sandbox = { path = "<path/to/cryptography_sandbox>" }
+```
+# Documentation
+In order to see the documentation for the library, run the following command:
+```sh
+cargo doc --open
 ```

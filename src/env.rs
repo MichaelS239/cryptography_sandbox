@@ -1,3 +1,6 @@
+//! Environment infrastructure
+//!
+//! Environment is responsible for handling users and sending messages.
 use crate::encryption_protocol::EncryptionProtocol;
 use crate::message::{Message, MessageType};
 use crate::user::User;
@@ -5,12 +8,38 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 
+/// Environment struct.
+///
+/// Environment is responsible for handling users and sending messages.
+/// It supports creating new users, sending public keys and encrypted messages
+/// between them. All of the encrypted messages are written to the log.
+///
+/// # Example
+/// ```rust
+/// use cryptography_sandbox::env::Env;
+/// use cryptography_sandbox::rsa::RSA;
+/// // We create an environment that uses RSA protocol and specify the log file.
+/// let mut env: Env<RSA> = Env::from_file("my_log.txt");
+///
+/// // We create two users: Alice and Bob.
+/// env.create_user("Alice");
+/// env.create_user("Bob");
+///
+/// // We can get users from the environment.
+/// let user1 = env.get_user("Alice").expect("name not found");
+/// let user2 = env.get_user("Bob").expect("name not found");
+///
+/// // Note that the following commented command would result in an error because we
+/// // cannot create two users with the same name.
+/// //env.create_user("Alice");
+/// ```
 pub struct Env<T: EncryptionProtocol> {
     users: HashMap<String, User<T>>,
     log: fs::File,
 }
 
 impl<T: EncryptionProtocol> Env<T> {
+    /// Creates a new environment. Outputs the log to `log.txt` by default.
     pub fn new() -> Self {
         Self {
             users: HashMap::new(),
@@ -22,6 +51,7 @@ impl<T: EncryptionProtocol> Env<T> {
         }
     }
 
+    /// Creates a new environment from file. Outputs the log to the specified file.
     pub fn from_file(file_name: &str) -> Self {
         Self {
             users: HashMap::new(),
@@ -33,6 +63,7 @@ impl<T: EncryptionProtocol> Env<T> {
         }
     }
 
+    /// Creates new user. Note that all users in the environment must have unique names.
     pub fn create_user(&mut self, user_name: &str) {
         if user_name.is_empty() {
             panic!("name should not be empty");
@@ -45,18 +76,22 @@ impl<T: EncryptionProtocol> Env<T> {
         };
     }
 
+    /// Returns a reference to user by name.
     pub fn get_user(&self, user_name: &str) -> Option<&User<T>> {
         self.users.get(&String::from(user_name))
     }
 
+    /// Returns a mutable reference to user by name.
     pub fn get_mut_user(&mut self, user_name: &str) -> Option<&mut User<T>> {
         self.users.get_mut(&String::from(user_name))
     }
 
+    /// Checks whether a given user is present in the environment.
     pub fn find_user(&self, user_name: &str) -> bool {
         self.users.contains_key(&String::from(user_name))
     }
 
+    /// Sends an encrypted message between users. Outputs the message to the log.
     pub fn send_message(&mut self, message: Message) {
         if !self.users.contains_key(message.get_sender()) {
             panic!("sender not found");
